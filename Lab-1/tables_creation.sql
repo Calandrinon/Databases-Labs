@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS Artists_Musicians, Artists_Albums, Albums_Songs, Review, Song, UserTransaction, Record, Album, Artist, Musician, ClientUser;
+DROP TABLE IF EXISTS Albums_Genres, Artists_Musicians, Artists_Albums, Albums_Songs, Genre, Review, Song, UserTransaction, Record, Album, Artist, Musician, ClientUser;
 
 CREATE TABLE Artist 
     (ArtistId INT PRIMARY KEY,
@@ -26,7 +26,18 @@ CREATE TABLE Album
     (AlbumId INT PRIMARY KEY,
      Name VARCHAR(50),
      ReleaseDate DATE,
-     )
+     AlbumArtLink VARCHAR(200))
+
+
+CREATE TABLE Genre
+    (GenreId INT PRIMARY KEY,
+     Title VARCHAR(30))
+
+
+CREATE TABLE Albums_Genres
+    (AlbumId INT REFERENCES Album(AlbumId),
+     GenreId INT REFERENCES Genre(GenreId),
+     PRIMARY KEY (AlbumId, GenreId))
 
 
 CREATE TABLE Artists_Albums
@@ -37,8 +48,7 @@ CREATE TABLE Artists_Albums
 
 CREATE TABLE Song
     (SongId BIGINT PRIMARY KEY,
-     Name VARCHAR(50),
-     AlbumId INT REFERENCES Album(AlbumId))
+     Title VARCHAR(50))
 
 
 CREATE TABLE Albums_Songs
@@ -51,7 +61,8 @@ CREATE TABLE Record
     (RecordId INT PRIMARY KEY,
      AlbumId INT REFERENCES Album(AlbumId),
      Price REAL,
-     InStock INT)
+     InStock INT,
+     RecordType VARCHAR(10))
 
 
 CREATE TABLE ClientUser
