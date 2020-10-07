@@ -3,8 +3,7 @@ DROP TABLE IF EXISTS Albums_Genres, Artists_Musicians, Artists_Albums, Albums_So
 CREATE TABLE Artist 
     (ArtistId INT PRIMARY KEY,
     Name VARCHAR(50),
-    EstablishmentYear SMALLINT,
-    )
+    EstablishmentYear SMALLINT)
 
 -- An artist can be either an individual, or a band with multiple members.
 -- Therefore, we can create a separate table for storing musicians, and an intermediary table
