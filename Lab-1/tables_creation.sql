@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS Albums_Genres, Artists_Musicians, Artists_Albums, Albums_Songs, Genre, Review, Song, UserTransaction, Record, Album, Artist, Musician, ClientUser;
+DROP TABLE IF EXISTS Record_UserTransaction, Albums_Genres, Artists_Musicians, Artists_Albums, Albums_Songs, Genre, Review, Song, UserTransaction, Record, Album, Artist, Musician, ClientUser;
 
 CREATE TABLE Artist 
     (ArtistId INT IDENTITY(1, 1) PRIMARY KEY,
@@ -61,13 +61,14 @@ CREATE TABLE Record
      AlbumId INT REFERENCES Album(AlbumId) ON DELETE CASCADE,
      Price REAL NOT NULL,
      InStock INT NOT NULL,
-     RecordType VARCHAR(10) NOT NULL)
+     RecordType VARCHAR(10) NOT NULL,
+     UNIQUE (AlbumId, RecordType))
 
 
 CREATE TABLE ClientUser
     (UserId INT IDENTITY(1, 1) PRIMARY KEY,
      Username VARCHAR(50) NOT NULL UNIQUE,
-     Password VARCHAR(50) NOT NULL CHECK (LEN(Password) > 10)) 
+     Password VARCHAR(50) NOT NULL) 
 
 
 CREATE TABLE UserTransaction
@@ -77,8 +78,15 @@ CREATE TABLE UserTransaction
      TransactionDateTime DATETIME NOT NULL)
 
 
+CREATE TABLE Record_UserTransaction
+    (RecordId INT REFERENCES Record(RecordId),
+     TransactionId INT REFERENCES UserTransaction(TransactionId))
+
+
 CREATE TABLE Review
     (ReviewId INT IDENTITY(1, 1) PRIMARY KEY,
      UserId INT REFERENCES ClientUser(UserId) ON DELETE SET NULL,
      ReviewText TEXT NOT NULL,
-     ReviewTime DATETIME NOT NULL)
+     ReviewTime DATETIME NOT NULL,
+     RecordId INT REFERENCES Record(RecordId),
+     CONSTRAINT UniqueReview UNIQUE (UserId, RecordId))
