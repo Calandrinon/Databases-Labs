@@ -25,7 +25,8 @@ CREATE TABLE Album
     (AlbumId INT IDENTITY(1, 1) PRIMARY KEY,
      Name VARCHAR(50) NOT NULL,
      ReleaseDate DATE NOT NULL,
-     AlbumArtLink VARCHAR(200))
+     AlbumArtLink VARCHAR(200),
+     UNIQUE(Name, ReleaseDate))
 
 
 CREATE TABLE Genre
@@ -68,19 +69,21 @@ CREATE TABLE Record
 CREATE TABLE ClientUser
     (UserId INT IDENTITY(1, 1) PRIMARY KEY,
      Username VARCHAR(50) NOT NULL UNIQUE,
-     Password VARCHAR(50) NOT NULL) 
+     EncryptedPassword VARCHAR(50) NOT NULL) 
+
+
+CREATE TABLE Users_Records
+    (UserId INT REFERENCES ClientUser(UserId),
+     RecordId INT REFERENCES Record(RecordId),
+     PRIMARY KEY (UserId, RecordId))
 
 
 CREATE TABLE UserTransaction
     (TransactionId INT IDENTITY(1, 1) PRIMARY KEY,
      UserId INT REFERENCES ClientUser(UserId) ON DELETE CASCADE,
      RecordId INT REFERENCES Record(RecordId) ON DELETE CASCADE,
-     TransactionDateTime DATETIME NOT NULL)
-
-
-CREATE TABLE Record_UserTransaction
-    (RecordId INT REFERENCES Record(RecordId),
-     TransactionId INT REFERENCES UserTransaction(TransactionId))
+     TransactionDateTime DATETIME NOT NULL,
+     FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId))
 
 
 CREATE TABLE Review
@@ -89,4 +92,4 @@ CREATE TABLE Review
      ReviewText TEXT NOT NULL,
      ReviewTime DATETIME NOT NULL,
      RecordId INT REFERENCES Record(RecordId),
-     CONSTRAINT UniqueReview UNIQUE (UserId, RecordId))
+     FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId))
