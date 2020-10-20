@@ -1,9 +1,10 @@
-DROP TABLE IF EXISTS Record_UserTransaction, Albums_Genres, Artists_Musicians, Artists_Albums, Albums_Songs, Genre, Review, Song, UserTransaction, Record, Album, Artist, Musician, ClientUser;
+DROP TABLE IF EXISTS Users_Records, Record_UserTransaction, Albums_Genres, Artists_Musicians, Artists_Albums, Albums_Songs, Genre, Review, Song, UserTransaction, Record, Album, Artist, Musician, ClientUser;
 
 CREATE TABLE Artist 
     (ArtistId INT IDENTITY(1, 1) PRIMARY KEY,
     Name VARCHAR(50) NOT NULL,
-    EstablishmentYear SMALLINT)
+    EstablishmentYear SMALLINT,
+    UNIQUE (Name, EstablishmentYear))
 
 -- An artist can be either an individual, or a band with multiple members.
 -- Therefore, we can create a separate table for storing musicians, and an intermediary table
@@ -12,7 +13,8 @@ CREATE TABLE Artist
 CREATE TABLE Musician
     (MusicianId INT IDENTITY(1, 1) PRIMARY KEY,
      Name VARCHAR(50) NOT NULL,
-     Date_of_birth DATE NOT NULL)
+     Date_of_birth DATE NOT NULL,
+     UNIQUE (Name, Date_of_birth))
 
 
 CREATE TABLE Artists_Musicians
@@ -26,12 +28,12 @@ CREATE TABLE Album
      Name VARCHAR(50) NOT NULL,
      ReleaseDate DATE NOT NULL,
      AlbumArtLink VARCHAR(200),
-     UNIQUE(Name, ReleaseDate))
+     UNIQUE(Name, ReleaseDate, AlbumArtLink))
 
 
 CREATE TABLE Genre
     (GenreId INT IDENTITY(1, 1) PRIMARY KEY,
-     Title VARCHAR(30) NOT NULL)
+     Title VARCHAR(30) NOT NULL UNIQUE)
 
 
 CREATE TABLE Albums_Genres
@@ -48,7 +50,8 @@ CREATE TABLE Artists_Albums
 
 CREATE TABLE Song
     (SongId BIGINT IDENTITY(1, 1) PRIMARY KEY,
-     Title VARCHAR(50))
+     Title VARCHAR(50),
+     ArtistId INT REFERENCES Artist(ArtistId))
 
 
 CREATE TABLE Albums_Songs
