@@ -57,6 +57,9 @@ INSERT INTO UserTransaction(UserId, RecordId, TransactionDateTime) VALUES (3, 5,
 INSERT INTO UserTransaction(UserId, RecordId, TransactionDateTime) VALUES (3, 5, '20200902 11:11:25 AM')
 INSERT INTO UserTransaction(UserId, RecordId, TransactionDateTime) VALUES (3, 200, '20200902 11:11:25 AM')
 
+INSERT INTO UserTransaction(UserId, RecordId, TransactionDateTime) VALUES (3, 1, '20030527 12:15:03 PM')
+INSERT INTO UserTransaction(UserId, RecordId, TransactionDateTime) VALUES (3, 1, '20040527 12:15:03 PM')
+
 
 SELECT * FROM Album;
 SELECT * FROM Artist;
