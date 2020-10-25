@@ -53,6 +53,7 @@ INSERT INTO Record(AlbumId, Price, InStock, RecordType) VALUES (999, 999.99, 250
 INSERT INTO ClientUser(Username, EncryptedPassword, RegistrationDate) VALUES ('User123', '8gh8hg;koghj38kjhgys893ol;kmn', '20190618 10:34:09 AM')
 INSERT INTO ClientUser(Username, EncryptedPassword, RegistrationDate) VALUES ('User456', '82ygbjgi87tgh3u76rdcvdghuytgb', '20180618 10:34:09 AM')
 INSERT INTO ClientUser(Username, EncryptedPassword, RegistrationDate) VALUES ('User789', 'nhgtf673ukj9gh84ijgo049hno4gj', '20150618 10:34:09 AM')
+INSERT INTO ClientUser(Username, EncryptedPassword, RegistrationDate) VALUES ('Cooluser', 'j28g7hndjvg7hi2johg782h9ohggh', '20200903 11:24:25 PM')
 
 INSERT INTO Users_Records(UserId, RecordId) VALUES (2, 3)
 INSERT INTO Users_Records(UserId, RecordId) VALUES (2, 5)

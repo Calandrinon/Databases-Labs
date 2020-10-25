@@ -84,3 +84,17 @@ WHERE A.ArtistId IN
         (SELECT AG.AlbumId 
         FROM Albums_Genres AG
         WHERE AG.GenreId = 2)) 
+
+
+-- Get all users and their transactions made after the 1st of September, 2020 and a bad rating
+SELECT DISTINCT C.Username, UT.RecordId, UT.TransactionDateTime, R.Rating 
+FROM ClientUser C
+INNER JOIN UserTransaction UT ON (UT.UserId = C.UserId AND UT.TransactionDateTime >= '20200901 00:00:00 AM') 
+INNER JOIN Review R ON (R.RecordId = UT.RecordId AND R.Rating < 5)
+
+
+-- Check who made and who didn't make a transaction after the 1st of September, 2020
+SELECT DISTINCT C.Username, UT.RecordId, UT.TransactionDateTime 
+FROM ClientUser C
+LEFT JOIN UserTransaction UT ON (UT.UserId = C.UserId AND UT.TransactionDateTime >= '20200901 00:00:00 AM') 
+
