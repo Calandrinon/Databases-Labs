@@ -10,7 +10,6 @@ UPDATE Review
 SET ReviewTime='20201020 05:00:02 PM', ReviewText='I edited this review'
 WHERE UserId=3
 
-
 DELETE FROM UserTransaction
 WHERE TransactionDateTime < '20050101 00:00:00 AM' AND TransactionDateTime >= '20030101 00:00:00 AM'
 

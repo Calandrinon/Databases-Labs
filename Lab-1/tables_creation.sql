@@ -72,7 +72,8 @@ CREATE TABLE Record
 CREATE TABLE ClientUser
     (UserId INT IDENTITY(1, 1) PRIMARY KEY,
      Username VARCHAR(50) NOT NULL UNIQUE,
-     EncryptedPassword VARCHAR(50) NOT NULL) 
+     EncryptedPassword VARCHAR(50) NOT NULL,
+     RegistrationDate DATETIME NOT NULL) 
 
 
 CREATE TABLE Users_Records
@@ -94,5 +95,6 @@ CREATE TABLE Review
      UserId INT REFERENCES ClientUser(UserId) ON DELETE SET NULL,
      ReviewText TEXT NOT NULL,
      ReviewTime DATETIME NOT NULL,
+     Rating INT CHECK (Rating >= 1 AND Rating <= 10),
      RecordId INT REFERENCES Record(RecordId),
      FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId))
