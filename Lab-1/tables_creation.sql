@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS Users_Records, Record_UserTransaction, Albums_Genres, Artists_Musicians, Artists_Albums, Albums_Songs, Genre, Review, Song, UserTransaction, Record, Album, Artist, Musician, ClientUser;
+DROP TABLE IF EXISTS Concert, Concerts_Artists, Users_Records, Record_UserTransaction, Albums_Genres, Artists_Musicians, Artists_Albums, Albums_Songs, Genre, Review, Song, UserTransaction, Record, Album, Artist, Musician, ClientUser;
 
 CREATE TABLE Artist 
     (ArtistId INT IDENTITY(1, 1) PRIMARY KEY,
@@ -98,3 +98,19 @@ CREATE TABLE Review
      Rating INT CHECK (Rating >= 1 AND Rating <= 10),
      RecordId INT REFERENCES Record(RecordId),
      FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId))
+
+
+CREATE TABLE Concert
+    (ConcertId INT IDENTITY(1, 1) PRIMARY KEY,
+     Country VARCHAR(30),
+     City VARCHAR(30),
+     Place VARCHAR(50),
+     ConcertTime DATETIME,
+     AvailableTickets INT,
+     UNIQUE (Place, ConcertTime))
+
+
+CREATE TABLE Concerts_Artists
+    (ConcertId INT REFERENCES Concert(ConcertId),
+     ArtistId INT REFERENCES Artist(ArtistId)
+     PRIMARY KEY (ConcertId, ArtistId))

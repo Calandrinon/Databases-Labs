@@ -1,56 +1,64 @@
 -- Displays the albums of each band: warm-up exercise
-SELECT Ar.Name, Al.Name, Al.AlbumId
+SELECT Ar.Name AS ArtistName, Al.Name AS AlbumTitle, Al.AlbumId
 FROM Artist Ar, Album Al, Artists_Albums AA
 WHERE Al.AlbumId = AA.AlbumId AND Ar.ArtistId = AA.ArtistId;
 
 SELECT A.Name
 FROM Artist A
 WHERE A.ArtistId IN
-    (SELECT A.ArtistId
-    FROM Artist A
-    WHERE EstablishmentYear = 1968
-    UNION
-    SELECT A.ArtistId
-    FROM Artist A, Album Al
-    WHERE Al.AlbumId IN
-        (SELECT AG.AlbumId 
-        FROM Albums_Genres AG
-        WHERE AG.GenreId = 1)) --Obtains all the artists established in 1968 or belonging to the "progressive rock" genre  
+    (SELECT AA.ArtistId
+    FROM Artists_Albums AA
+    WHERE AA.AlbumId IN
+        (SELECT Al.AlbumId
+        FROM Album Al
+        WHERE AlbumId IN
+            (SELECT AG.AlbumId
+             FROM Albums_Genres AG
+             WHERE AG.GenreId = 1)
+        UNION
+        SELECT Al.AlbumId
+        FROM Album Al
+        WHERE AlbumId IN
+              (SELECT AG.AlbumId
+               FROM Albums_Genres AG
+               WHERE AG.GenreId = 2))) -- Gets all the artists which belong to either the progressive rock genre or the psychedelic rock genre
 
 
--- All transactions made in the last month and transactions with a cost greater than 200
+-- All transactions made in the last 2 months and transactions with a cost greater than 200
 SELECT T.TransactionId
 FROM UserTransaction T
-WHERE T.TransactionDateTime >= GETDATE() - 30
-UNION
-SELECT T.TransactionId
-FROM UserTransaction T
-WHERE T.RecordId IN
+WHERE T.TransactionDateTime >= GETDATE() - 60 OR T.RecordId IN
     (SELECT R.RecordId 
      FROM Record R
-     WHERE R.Price >= 200
-    )
+     WHERE R.Price >= 200)
 
 
--- Get users which bought more than 1 record and spent more than 200$
-SELECT UT.UserId
-FROM UserTransaction UT
-GROUP BY UT.UserId
-HAVING COUNT(UT.UserId) >= 2
-INTERSECT
-SELECT UR.UserId
-FROM Users_Records UR
-WHERE 200 <= (SELECT SUM(R.Price) FROM Record R WHERE R.RecordId = UR.RecordId)
-
-
--- Get users which wrote a negative review (score under 5) and whose accounts are older than a year 
-SELECT R.UserId
-FROM Review R
-WHERE R.Rating < 5
-INTERSECT
-SELECT U.UserId
+-- Get users which bought more than 2 records and bought after 1st of October, 2020
+SELECT U.Username
 FROM ClientUser U
-WHERE U.RegistrationDate < GETDATE() - 365;
+WHERE U.UserId IN
+      (SELECT UT.UserId
+       FROM UserTransaction UT
+       GROUP BY UT.UserId
+       HAVING COUNT(UT.UserId) > 2
+       INTERSECT
+       SELECT UT.UserId
+       FROM UserTransaction UT
+       WHERE UT.TransactionDateTime > '20201001 00:00:00 AM'
+      )
+
+
+-- Get users which wrote a negative review (score under 5) and whose accounts are older than a year
+SELECT U.Username
+FROM ClientUser U
+WHERE U.UserId IN
+    (SELECT R.UserId
+    FROM Review R
+    WHERE R.Rating < 5
+    INTERSECT
+    SELECT U.UserId
+    FROM ClientUser U
+    WHERE U.RegistrationDate < GETDATE() - 365)
 
 
 
@@ -71,23 +79,29 @@ WHERE U.UserId IN
 SELECT A.Name 
 FROM Artist A
 WHERE A.ArtistId IN
-    (SELECT DISTINCT A.ArtistId
-    FROM Artist A, Album Al
-    WHERE Al.AlbumId IN
-        (SELECT AG.AlbumId 
-        FROM Albums_Genres AG
-        WHERE AG.GenreId = 1)   
-    EXCEPT
-    SELECT AA.ArtistId
+    (SELECT AA.ArtistId
     FROM Artists_Albums AA
     WHERE AA.AlbumId IN
-        (SELECT AG.AlbumId 
-        FROM Albums_Genres AG
-        WHERE AG.GenreId = 2)) 
+          (SELECT Al.AlbumId
+           FROM Album Al
+           WHERE AlbumId IN
+                 (SELECT AG.AlbumId
+                  FROM Albums_Genres AG
+                  WHERE AG.GenreId = 1))
+    EXCEPT
+     SELECT AA.ArtistId
+     FROM Artists_Albums AA
+     WHERE AA.AlbumId IN
+           (SELECT Al.AlbumId
+            FROM Album Al
+            WHERE AlbumId IN
+                  (SELECT AG.AlbumId
+                   FROM Albums_Genres AG
+                   WHERE AG.GenreId = 2)))
 
 
--- Get all users and their transactions made after the 1st of September, 2020 and a bad rating
-SELECT DISTINCT C.Username, UT.RecordId, UT.TransactionDateTime, R.Rating 
+-- Get all users and their transactions made after the 1st of September, 2020 having a bad rating
+SELECT C.Username, UT.RecordId, UT.TransactionDateTime, R.Rating
 FROM ClientUser C
 INNER JOIN UserTransaction UT ON (UT.UserId = C.UserId AND UT.TransactionDateTime >= '20200901 00:00:00 AM') 
 INNER JOIN Review R ON (R.RecordId = UT.RecordId AND R.Rating < 5)
@@ -98,3 +112,9 @@ SELECT DISTINCT C.Username, UT.RecordId, UT.TransactionDateTime
 FROM ClientUser C
 LEFT JOIN UserTransaction UT ON (UT.UserId = C.UserId AND UT.TransactionDateTime >= '20200901 00:00:00 AM') 
 
+
+SELECT C.Country, C.City, C.AvailableTickets
+FROM Concert C 
+WHERE EXISTS
+    (SELECT *  
+     FROM Concert C WHERE C.AvailableTickets >= 150000)
