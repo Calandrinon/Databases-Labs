@@ -78,7 +78,7 @@ CREATE TABLE ClientUser
 
 CREATE TABLE Users_Records
     (UserId INT REFERENCES ClientUser(UserId),
-     RecordId INT REFERENCES Record(RecordId),
+     RecordId INT REFERENCES Record(RecordId) ON DELETE CASCADE,
      PRIMARY KEY (UserId, RecordId))
 
 
@@ -92,7 +92,7 @@ CREATE TABLE UserTransaction
 
 CREATE TABLE Review
     (ReviewId INT IDENTITY(1, 1) PRIMARY KEY,
-     UserId INT REFERENCES ClientUser(UserId) ON DELETE SET NULL,
+     UserId INT REFERENCES ClientUser(UserId) ON DELETE CASCADE,
      ReviewText TEXT NOT NULL,
      ReviewTime DATETIME NOT NULL,
      Rating INT CHECK (Rating >= 1 AND Rating <= 10),
@@ -112,5 +112,5 @@ CREATE TABLE Concert
 
 CREATE TABLE Concerts_Artists
     (ConcertId INT REFERENCES Concert(ConcertId),
-     ArtistId INT REFERENCES Artist(ArtistId)
+     ArtistId INT REFERENCES Artist(ArtistId),
      PRIMARY KEY (ConcertId, ArtistId))
