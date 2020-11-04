@@ -49,14 +49,14 @@ CREATE TABLE Artists_Albums
 
 
 CREATE TABLE Song
-    (SongId BIGINT IDENTITY(1, 1) PRIMARY KEY,
+    (SongId INT IDENTITY(1, 1) PRIMARY KEY,
      Title VARCHAR(50),
      ArtistId INT REFERENCES Artist(ArtistId))
 
 
 CREATE TABLE Albums_Songs
     (AlbumId INT REFERENCES Album(AlbumId) ON DELETE CASCADE,
-     SongId BIGINT REFERENCES Song(SongId) ON DELETE CASCADE,
+     SongId INT REFERENCES Song(SongId) ON DELETE CASCADE,
      PRIMARY KEY(AlbumId, SongId))
 
 
