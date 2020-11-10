@@ -8,5 +8,13 @@ AS
     ALTER TABLE Song
     ALTER COLUMN SongId INT
 GO
-
-
+CREATE OR ALTER PROCEDURE AddVotesFieldToReviews
+AS
+    ALTER TABLE Review
+    ADD UpvotesDownvotes INT
+GO
+CREATE OR ALTER PROCEDURE RemoveVotesFieldFromReviews
+AS
+    ALTER TABLE Review
+    DROP COLUMN UpvotesDownvotes
+GO

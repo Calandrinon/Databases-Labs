@@ -108,9 +108,9 @@ LEFT JOIN UserTransaction UT ON (UT.UserId = C.UserId AND UT.TransactionDateTime
 
 
 -- Get the musicians which participate at the concerts stored in the database
-SELECT ConcertId, AM.ArtistId
+SELECT DISTINCT ConcertId, AM.ArtistId
 FROM Concerts_Artists CA
-RIGHT JOIN Artists_Musicians AM on CA.ArtistId = AM.ArtistId
+RIGHT JOIN Artists_Musicians AM on CA.ArtistId = AM.ArtistId  -- 3NF
 
 
 -- Get the IDs of the artists, their albums and the genres they belong to
