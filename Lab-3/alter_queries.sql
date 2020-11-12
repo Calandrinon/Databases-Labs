@@ -24,7 +24,6 @@ AS
     DROP COLUMN UpvotesDownvotes
 GO
 EXEC AddVotesFieldToReviews
-GO
 EXEC RemoveVotesFieldFromReviews
 GO
 CREATE OR ALTER PROCEDURE AddDefaultNullValue
@@ -112,6 +111,91 @@ GO
 
 EXEC CreateRecordLabelTable
 EXEC DropRecordLabelTable
+
+
+CREATE OR ALTER PROCEDURE CreateDatabaseVersionTable
+AS
+    DROP TABLE IF EXISTS DatabaseVersion
+    CREATE TABLE DatabaseVersion
+        (VersionId INT IDENTITY (1,1) PRIMARY KEY,
+         LastProcedureName VARCHAR(50),
+         ReverseProcedureName VARCHAR(50),
+         IsVersionSelected BIT
+        )
+
+    /**
+    EXEC ReverseRecordsInStockType
+    EXEC RemoveVotesFieldFromReviews
+    EXEC RemoveDefaultNullValue
+    EXEC RemoveReviewIdPK
+    EXEC RemoveUsernameCandidateKey
+    EXEC RemoveUserIdRecordIdFKInTransaction
+    EXEC DropRecordLabelTable
+     */
+
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('ChangeRecordsInStockType', 'ReverseRecordsInStockType', 1)
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddVotesFieldToReviews', 'RemoveVotesFieldFromReviews', 1)
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddDefaultNullValue', 'RemoveDefaultNullValue', 1)
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddReviewIdPK', 'RemoveReviewIdPK', 1)
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddUsernameCandidateKey', 'RemoveUsernameCandidateKey', 1)
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddUserIdRecordIdFKInTransaction', 'RemoveUserIdRecordIdFKInTransaction', 1)
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('CreateRecordLabelTable', 'DropRecordLabelTable', 1)
+
+    DECLARE @TableSize INT = (SELECT COUNT(*) FROM DatabaseVersion)
+    DECLARE @Action NVARCHAR(100)
+    DECLARE @IT INT = 1
+    WHILE @IT <= @TableSize
+    BEGIN
+        SET @Action = 'EXEC ' + CAST((SELECT DV.LastProcedureName FROM DatabaseVersion DV WHERE DV.VersionId = @IT) AS NVARCHAR(50))
+        PRINT 'Action: ' + @Action
+        EXEC sp_executesql @Action
+        SET @IT = @IT + 1
+    END
+GO
+
+
+EXEC CreateDatabaseVersionTable
+
+CREATE OR ALTER PROCEDURE SelectDatabaseVersion (@VersionNumber INT)
+AS
+    DECLARE @NumberOfVersions INT = (SELECT COUNT(*) FROM DatabaseVersion)
+    IF @VersionNumber >= 1 AND @VersionNumber <= @NumberOfVersions
+    BEGIN
+        DECLARE @SelectedVersion INT = (SELECT MAX(DV.VersionId) FROM DatabaseVersion DV WHERE DV.IsVersionSelected = 1)
+        IF @VersionNumber = @SelectedVersion
+        BEGIN
+            PRINT 'Version ' + cast(@SelectedVersion as VARCHAR(4)) + ' has been already selected.'
+            RETURN
+        END
+
+        DECLARE @IncrementorValue INT = IIF(@SelectedVersion > @VersionNumber, -1, 1)
+        DECLARE @Action NVARCHAR(100)
+        IF @IncrementorValue = -1
+            SET @Action = 'EXEC ' + CAST((SELECT DV.ReverseProcedureName FROM DatabaseVersion DV WHERE DV.VersionId = @SelectedVersion) AS NVARCHAR(50))
+        ELSE
+            SET @Action = 'EXEC ' + CAST((SELECT DV.LastProcedureName FROM DatabaseVersion DV WHERE DV.VersionId = @SelectedVersion) AS NVARCHAR(50))
+
+        WHILE @SelectedVersion != @VersionNumber
+        BEGIN
+            EXEC sp_executesql @Action
+
+            UPDATE DatabaseVersion
+            SET IsVersionSelected = IIF(@IncrementorValue = 1, 1, 0)
+            WHERE VersionId = @SelectedVersion
+
+            SET @SelectedVersion = @SelectedVersion + @IncrementorValue
+        END
+    END
+    ELSE
+    BEGIN
+        PRINT 'The version number should be between 1 and ' + cast(@NumberOfVersions as VARCHAR(4))
+    END
+GO
+
+EXEC SelectDatabaseVersion @VersionNumber = 6
+SELECT * FROM DatabaseVersion
+
+GO
 
 /**
 SELECT name, type, unique_index_id, is_system_named
