@@ -70,10 +70,11 @@ CREATE TABLE Record
 
 
 CREATE TABLE ClientUser
-    (UserId INT IDENTITY(1, 1) PRIMARY KEY,
+    (UserId INT IDENTITY(1, 1),
      Username VARCHAR(50) NOT NULL,
      EncryptedPassword VARCHAR(50) NOT NULL,
-     RegistrationDate DATETIME NOT NULL)
+     RegistrationDate DATETIME NOT NULL,
+     CONSTRAINT PK_UserId PRIMARY KEY (UserId))
 
 
 CREATE TABLE Users_Records
@@ -87,17 +88,18 @@ CREATE TABLE UserTransaction
      UserId INT REFERENCES ClientUser(UserId) ON DELETE CASCADE,
      RecordId INT REFERENCES Record(RecordId) ON DELETE CASCADE,
      TransactionDateTime DATETIME NOT NULL,
-     FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId))
+     CONSTRAINT FK_UserId_RecordId FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId))
 
 
 CREATE TABLE Review
-    (ReviewId INT IDENTITY(1, 1) PRIMARY KEY,
+    (ReviewId INT IDENTITY(1, 1),
      UserId INT REFERENCES ClientUser(UserId) ON DELETE CASCADE,
      ReviewText TEXT NOT NULL,
      ReviewTime DATETIME NOT NULL,
      Rating INT CHECK (Rating >= 1 AND Rating <= 10),
      RecordId INT REFERENCES Record(RecordId),
-     FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId))
+     CONSTRAINT PK_ReviewId PRIMARY KEY (ReviewId),
+     CONSTRAINT FK_Review_UserId FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId))
 
 
 CREATE TABLE Concert
@@ -114,3 +116,4 @@ CREATE TABLE Concerts_Artists
     (ConcertId INT REFERENCES Concert(ConcertId),
      ArtistId INT REFERENCES Artist(ArtistId),
      PRIMARY KEY (ConcertId, ArtistId))
+

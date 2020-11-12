@@ -23,10 +23,10 @@ AS
     ALTER TABLE Review
     DROP COLUMN UpvotesDownvotes
 GO
-
 EXEC AddVotesFieldToReviews
+GO
 EXEC RemoveVotesFieldFromReviews
-
+GO
 CREATE OR ALTER PROCEDURE AddDefaultNullValue
 AS
     ALTER TABLE Record
@@ -44,25 +44,77 @@ EXEC RemoveDefaultNullValue
 
 GO
 
+CREATE OR ALTER PROCEDURE AddReviewIdPK
+AS
+    ALTER TABLE Review
+    ADD CONSTRAINT PK_ReviewId PRIMARY KEY (ReviewId)
+GO
+
+CREATE OR ALTER PROCEDURE RemoveReviewIdPK
+AS
+    ALTER TABLE Review
+    DROP CONSTRAINT PK_ReviewId
+GO
+
+EXEC RemoveReviewIdPK
+EXEC AddReviewIdPK
+
+GO
+CREATE OR ALTER PROCEDURE AddUsernameCandidateKey
+AS
+    ALTER TABLE ClientUser
+    ADD CONSTRAINT UniqueUsername UNIQUE (Username)
+GO
+
+CREATE OR ALTER PROCEDURE RemoveUsernameCandidateKey
+AS
+    ALTER TABLE ClientUser
+    DROP CONSTRAINT UniqueUsername
+GO
+
+EXEC RemoveUsernameCandidateKey
+EXEC AddUsernameCandidateKey
+
+GO
+
+CREATE OR ALTER PROCEDURE AddUserIdRecordIdFKInTransaction
+AS
+    ALTER TABLE UserTransaction
+    ADD CONSTRAINT FK_UserId_RecordId FOREIGN KEY (UserId, RecordId) REFERENCES Users_Records(UserId, RecordId)
+GO
+
+CREATE OR ALTER PROCEDURE RemoveUserIdRecordIdFKInTransaction
+AS
+    ALTER TABLE UserTransaction
+    DROP CONSTRAINT FK_UserId_RecordId
+GO
+
+EXEC RemoveUserIdRecordIdFKInTransaction
+EXEC AddUserIdRecordIdFKInTransaction
+
+CREATE OR ALTER PROCEDURE CreateRecordLabelTable
+AS
+    CREATE TABLE RecordLabel
+        (LabelId INT IDENTITY (1, 1),
+         Name VARCHAR(50) UNIQUE,
+         CONSTRAINT PK_LabelId PRIMARY KEY (LabelId))
+
+    CREATE TABLE Artist_RecordLabel
+        (ArtistId INT REFERENCES Artist(ArtistId),
+         LabelId INT REFERENCES RecordLabel(LabelId))
+GO
+
+CREATE OR ALTER PROCEDURE DropRecordLabelTable
+AS
+    DROP TABLE Artist_RecordLabel
+    DROP TABLE RecordLabel
+GO
+
+EXEC CreateRecordLabelTable
+EXEC DropRecordLabelTable
+
 /**
-CREATE OR ALTER PROCEDURE AddUserPK
-AS
-    ALTER TABLE ClientUser
-    ADD CONSTRAINT PK_UserId_Username PRIMARY KEY (UserId, Username)
-GO
-
-CREATE OR ALTER PROCEDURE RemoveUserCompositePK
-AS
-    ALTER TABLE ClientUser
-    DROP CONSTRAINT PK_UserId_Username
-    ALTER TABLE ClientUser
-    ADD CONSTRAINT PK_UserId PRIMARY KEY (UserId)
-GO
-
-EXEC AddUserCompositePK
-EXEC RemoveUserCompositePK
-
 SELECT name, type, unique_index_id, is_system_named
 FROM sys.key_constraints
 WHERE type = 'PK';
-**/
+ */
