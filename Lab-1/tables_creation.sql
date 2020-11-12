@@ -71,9 +71,9 @@ CREATE TABLE Record
 
 CREATE TABLE ClientUser
     (UserId INT IDENTITY(1, 1) PRIMARY KEY,
-     Username VARCHAR(50) NOT NULL UNIQUE,
+     Username VARCHAR(50) NOT NULL,
      EncryptedPassword VARCHAR(50) NOT NULL,
-     RegistrationDate DATETIME NOT NULL) 
+     RegistrationDate DATETIME NOT NULL)
 
 
 CREATE TABLE Users_Records
