@@ -119,9 +119,13 @@ AS
     CREATE TABLE DatabaseVersion
         (VersionId INT IDENTITY (1,1) PRIMARY KEY,
          LastProcedureName VARCHAR(50),
-         ReverseProcedureName VARCHAR(50),
-         IsVersionSelected BIT
+         ReverseProcedureName VARCHAR(50)
         )
+
+    DROP TABLE IF EXISTS CurrentDatabaseVersion
+    CREATE TABLE CurrentDatabaseVersion
+        (VersionId INT)
+
 
     BEGIN TRY EXEC DropRecordLabelTable END TRY BEGIN CATCH END CATCH
     BEGIN TRY EXEC RemoveUserIdRecordIdFKInTransaction END TRY BEGIN CATCH END CATCH
@@ -131,13 +135,13 @@ AS
     BEGIN TRY EXEC RemoveVotesFieldFromReviews END TRY BEGIN CATCH END CATCH
     BEGIN TRY EXEC ReverseRecordsInStockType END TRY BEGIN CATCH END CATCH
 
-    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('ChangeRecordsInStockType', 'ReverseRecordsInStockType', 1)
-    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddVotesFieldToReviews', 'RemoveVotesFieldFromReviews', 1)
-    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddDefaultNullValue', 'RemoveDefaultNullValue', 1)
-    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddReviewIdPK', 'RemoveReviewIdPK', 1)
-    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddUsernameCandidateKey', 'RemoveUsernameCandidateKey', 1)
-    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('AddUserIdRecordIdFKInTransaction', 'RemoveUserIdRecordIdFKInTransaction', 1)
-    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName, IsVersionSelected) VALUES ('CreateRecordLabelTable', 'DropRecordLabelTable', 1)
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName) VALUES ('ChangeRecordsInStockType', 'ReverseRecordsInStockType')
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName) VALUES ('AddVotesFieldToReviews', 'RemoveVotesFieldFromReviews')
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName) VALUES ('AddDefaultNullValue', 'RemoveDefaultNullValue')
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName) VALUES ('AddReviewIdPK', 'RemoveReviewIdPK')
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName) VALUES ('AddUsernameCandidateKey', 'RemoveUsernameCandidateKey')
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName) VALUES ('AddUserIdRecordIdFKInTransaction', 'RemoveUserIdRecordIdFKInTransaction')
+    INSERT INTO DatabaseVersion(LastProcedureName, ReverseProcedureName) VALUES ('CreateRecordLabelTable', 'DropRecordLabelTable')
 
     DECLARE @TableSize INT = (SELECT COUNT(*) FROM DatabaseVersion)
     DECLARE @Action NVARCHAR(100)
@@ -149,6 +153,8 @@ AS
         EXEC sp_executesql @Action
         SET @IT = @IT + 1
     END
+
+    INSERT CurrentDatabaseVersion VALUES (@TableSize)
 GO
 
 EXEC CreateDatabaseVersionTable
@@ -158,7 +164,7 @@ AS
     DECLARE @NumberOfVersions INT = (SELECT COUNT(*) FROM DatabaseVersion)
     IF @VersionNumber >= 1 AND @VersionNumber <= @NumberOfVersions
     BEGIN
-        DECLARE @SelectedVersion INT = (SELECT MAX(DV.VersionId) FROM DatabaseVersion DV WHERE DV.IsVersionSelected = 1)
+        DECLARE @SelectedVersion INT = (SELECT VersionId FROM CurrentDatabaseVersion)
         IF @VersionNumber = @SelectedVersion
         BEGIN
             PRINT 'Version ' + cast(@SelectedVersion as VARCHAR(4)) + ' has been already selected.'
@@ -176,14 +182,13 @@ AS
                 SET @Action = 'EXEC ' + CAST((SELECT DV.LastProcedureName FROM DatabaseVersion DV WHERE DV.VersionId = @SelectedVersion + 1) AS NVARCHAR(50))
 
             EXEC sp_executesql @Action
-            PRINT 'VERSION ' + CAST(@SelectedVersion AS VARCHAR(5)) + 'OPERATION: ' + @Action
-
-
-            UPDATE DatabaseVersion
-            SET IsVersionSelected = IIF(@IncrementorValue = 1, 1, 0)
-            WHERE VersionId = @SelectedVersion + IIF(@IncrementorValue = 1, 1, 0)
+            PRINT 'VERSION ' + CAST(@SelectedVersion AS VARCHAR(5)) + ' OPERATION: ' + @Action
 
             SET @SelectedVersion = @SelectedVersion + @IncrementorValue
+
+            UPDATE CurrentDatabaseVersion
+            SET VersionId = @SelectedVersion
+
             PRINT 'VERSION ' + CAST(@SelectedVersion AS VARCHAR(5))
         END
     END
@@ -194,7 +199,6 @@ AS
 GO
 
 EXEC SelectDatabaseVersion @VersionNumber = 7
-SELECT * FROM DatabaseVersion
 
 GO
 
