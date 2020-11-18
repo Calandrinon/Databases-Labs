@@ -186,11 +186,11 @@ AS
 
             SET @SelectedVersion = @SelectedVersion + @IncrementorValue
 
-            UPDATE CurrentDatabaseVersion
-            SET VersionId = @SelectedVersion
-
             PRINT 'VERSION ' + CAST(@SelectedVersion AS VARCHAR(5))
         END
+
+        UPDATE CurrentDatabaseVersion
+        SET VersionId = @SelectedVersion
     END
     ELSE
     BEGIN
@@ -198,7 +198,8 @@ AS
     END
 GO
 
-EXEC SelectDatabaseVersion @VersionNumber = 7
+EXEC SelectDatabaseVersion @VersionNumber = 4
+SELECT * FROM CurrentDatabaseVersion
 
 GO
 
