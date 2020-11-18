@@ -162,7 +162,7 @@ EXEC CreateDatabaseVersionTable
 CREATE OR ALTER PROCEDURE SelectDatabaseVersion (@VersionNumber INT)
 AS
     DECLARE @NumberOfVersions INT = (SELECT COUNT(*) FROM DatabaseVersion)
-    IF @VersionNumber >= 1 AND @VersionNumber <= @NumberOfVersions
+    IF @VersionNumber >= 0 AND @VersionNumber <= @NumberOfVersions
     BEGIN
         DECLARE @SelectedVersion INT = (SELECT VersionId FROM CurrentDatabaseVersion)
         IF @VersionNumber = @SelectedVersion
