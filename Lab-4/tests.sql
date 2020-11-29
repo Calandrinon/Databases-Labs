@@ -19,10 +19,17 @@ AS
     SELECT @Output = @RandomString
 GO
 
+CREATE OR ALTER FUNCTION GenerateRandomDate (@NewId UNIQUEIDENTIFIER)
+RETURNS DATETIME
+BEGIN
+    RETURN DATEADD(DAY, ABS(CHECKSUM(@NewId) % (365 * 10) ), '2011-01-01')
+END
 
-DECLARE @SomeDate DATETIME;
-EXEC GenerateRandomDate @SomeDate
-SELECT @SomeDate
+
+DECLARE @Result DATETIME
+SET @Result = (SELECT dbo.GenerateRandomDate(NEWID()))
+PRINT @Result
+
 
 DECLARE @Result VARCHAR(50)
 EXEC GenerateRandomString @Result OUTPUT
@@ -49,7 +56,7 @@ AS DECLARE @startTime DATETIME;
         BEGIN
             EXEC GenerateRandomString @randomName OUTPUT
             EXEC GenerateRandomString @randomLink OUTPUT
-            SET @randomDate = DATEADD(DAY, ABS(CHECKSUM(NEWID()) % (365 * 10) ), '2011-01-01')
+            SET @randomDate = (SELECT dbo.GenerateRandomDate(NEWID()))
             PRINT 'Record: ' + @randomName + ' ' + @randomDate + ' ' + @randomLink
             INSERT INTO Album (Name, ReleaseDate, AlbumArtLink) VALUES (@randomName, @randomDate, @randomLink)
             SET @i = @i + 1;
@@ -59,7 +66,7 @@ AS DECLARE @startTime DATETIME;
     SELECT DATEDIFF(millisecond,@startTime,@endTime) AS elapsed_ms;
 GO
 
-EXEC TestArtistTableInsertionTime @INSERTIONS = 500
+EXEC TestAlbumTableInsertionTime @INSERTIONS = 1000
 SELECT * FROM Album
 
 
