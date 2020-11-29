@@ -1,3 +1,5 @@
+-- noinspection SqlResolveForFile @ routine/"sp_executesql"
+
 SELECT *
 FROM sys.tables
 
@@ -37,7 +39,8 @@ PRINT @Result
 
 
 CREATE OR ALTER PROCEDURE TestAlbumTableInsertionTime (@INSERTIONS INT)
-AS DECLARE @startTime DATETIME;
+AS
+    DECLARE @startTime DATETIME;
     DECLARE @endTime DATETIME;
 
     BEGIN TRY DELETE FROM Albums_Genres END TRY BEGIN CATCH END CATCH
@@ -66,7 +69,63 @@ AS DECLARE @startTime DATETIME;
     SELECT DATEDIFF(millisecond,@startTime,@endTime) AS elapsed_ms;
 GO
 
-EXEC TestAlbumTableInsertionTime @INSERTIONS = 1000
-SELECT * FROM Album
 
+CREATE OR ALTER PROCEDURE TablesInsertion
+AS
+    BEGIN TRY DELETE FROM Tables END TRY BEGIN CATCH END CATCH
+    INSERT INTO Tables (Name) VALUES ('Album')
+    INSERT INTO Tables (Name) VALUES ('Song')
+GO
+
+CREATE OR ALTER PROCEDURE TestTableInsertionTime (@TableId INT, @INSERTIONS INT)
+AS
+    DECLARE @TableName VARCHAR(50) = (SELECT T.Name FROM Tables T WHERE T.TableID = @TableId)
+    PRINT @TableName
+    IF (@TableName IS NULL)
+    BEGIN
+        THROW 123456, 'The table could not be found in [Tables]', 255
+    END
+
+    DECLARE @startTime DATETIME;
+    DECLARE @endTime DATETIME;
+
+    DECLARE @i INT = 0;
+    DECLARE @NumberOfColumns INT = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName);
+    DECLARE @Action NVARCHAR(50);
+    WHILE @i < @NumberOfColumns
+    BEGIN
+        SET @i = @i + 1;
+        SET @Action = 'DECLARE @Random' +
+        cast((SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @i) as NVARCHAR(50)) +
+        ' ' +
+        cast((SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @i) as NVARCHAR(50))
+        PRINT 'EXEC ' + @Action
+        EXEC sp_executesql @Action
+    END
+
+    /**
+    SET @i = 0;
+    SET @startTime= GETDATE();
+    DECLARE @j INT = 0;
+
+    WHILE @i < @INSERTIONS
+        BEGIN
+
+            EXEC GenerateRandomString @randomName OUTPUT
+            EXEC GenerateRandomString @randomLink OUTPUT
+            SET @randomDate = (SELECT dbo.GenerateRandomDate(NEWID()))
+            PRINT 'Record: ' + @randomName + ' ' + @randomDate + ' ' + @randomLink
+            INSERT INTO Album (Name, ReleaseDate, AlbumArtLink) VALUES (@randomName, @randomDate, @randomLink)
+            SET @i = @i + 1;
+        END
+
+    SET @endTime= GETDATE();
+    SELECT DATEDIFF(millisecond,@startTime,@endTime) AS elapsed_ms;
+    **/
+GO
+
+EXEC TablesInsertion
+SELECT * FROM Tables
+
+EXEC TestTableInsertionTime @TableId = 8, @INSERTIONS = 1000
 
