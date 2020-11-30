@@ -71,7 +71,16 @@ CREATE OR ALTER PROCEDURE TablesInsertion
 AS
     BEGIN TRY DELETE FROM Tables END TRY BEGIN CATCH END CATCH
     INSERT INTO Tables (Name) VALUES ('Album')
-    INSERT INTO Tables (Name) VALUES ('Song')
+    INSERT INTO Tables (Name) VALUES ('Artist')
+    INSERT INTO Tables (Name) VALUES ('Song');
+
+    BEGIN TRY DROP TABLE Datatypes END TRY BEGIN CATCH END CATCH
+    BEGIN TRY
+    CREATE TABLE Datatypes
+        (Id INT PRIMARY KEY,
+         Datatype VARCHAR(50))
+    END TRY
+    BEGIN CATCH END CATCH
 GO
 
 CREATE OR ALTER PROCEDURE TestTableInsertionTime (@TableId INT, @INSERTIONS INT)
@@ -98,6 +107,7 @@ AS
     DECLARE @RandomValue NVARCHAR(50);
     DECLARE @RowValues NVARCHAR(500) = '';
     DECLARE @ElapsedMilliseconds BIGINT = 0;
+    DELETE FROM Datatypes
 
     WHILE @i < @NumberOfColumns
     BEGIN
@@ -107,8 +117,10 @@ AS
         END
 
         SET @i = @i + 1;
+        PRINT '@i=' + cast(@i as VARCHAR(50))
         SET @ColumnName = cast((SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @i) as NVARCHAR(50))
         SET @Datatype = cast((SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @i) as NVARCHAR(50))
+        INSERT INTO Datatypes (Id, Datatype) VALUES (@i, @Datatype)
         SET @Columns = @Columns + @ColumnName
     END
     SET @Columns = @Columns + ')'
@@ -132,18 +144,19 @@ AS
                 SET @RowValues = @RowValues + ','
 
             SET @j = @j + 1;
-            SET @ColumnDatatype = cast((SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @j) as NVARCHAR(50))
+            SET @ColumnDatatype = (SELECT Datatype FROM Datatypes WHERE Id = @j)
 
             SET @RandomValue = (
                 CASE @ColumnDatatype
                     WHEN 'int' THEN cast(@i as NVARCHAR(50))
+                    WHEN 'smallint' THEN cast(@i as NVARCHAR(50))
                     WHEN 'text' THEN '''' + left(NEWID(), 30) + ''''
                     WHEN 'varchar' THEN '''' + left(NEWID(), 30) + ''''
                     WHEN 'datetime' THEN '''' + cast(DATEADD(DAY, ABS(CHECKSUM(NEWID()) % (365 * 10) ), '2011-01-01') as NVARCHAR(50)) + ''''
                     WHEN 'date' then '''' + cast(DATEADD(DAY, (ABS(CHECKSUM(NEWID())) % 65530), 0) as NVARCHAR(50)) + ''''
                 END)
 
-            SET @ColumnName = cast((SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @j) as NVARCHAR(50))
+            --SET @ColumnName = cast((SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @j) as NVARCHAR(50))
             SET @RowValues = @RowValues + cast(@RandomValue as NVARCHAR(50))
         END
         SET @RowValues = @RowValues + ')'
@@ -163,8 +176,40 @@ AS
 GO
 
 EXEC TablesInsertion
-SELECT * FROM Tables
 
-SELECT * FROM Album
-DELETE FROM Album
-EXEC TestTableInsertionTime @TableId = 11, @INSERTIONS = 100
+SELECT * FROM Tables
+DELETE FROM Artist
+SELECT * FROM Artist
+
+SELECT * FROM Datatypes
+EXEC TestTableInsertionTime @TableId = 26, @INSERTIONS = 1000
+
+
+SELECT
+   KCU1.TABLE_NAME AS 'FK_TABLE_NAME'
+   , KCU1.COLUMN_NAME AS 'FK_COLUMN_NAME'
+   , KCU2.TABLE_NAME AS 'UQ_TABLE_NAME'
+FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS RC
+JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KCU1
+ON KCU1.CONSTRAINT_CATALOG = RC.CONSTRAINT_CATALOG
+   AND KCU1.CONSTRAINT_SCHEMA = RC.CONSTRAINT_SCHEMA
+   AND KCU1.CONSTRAINT_NAME = RC.CONSTRAINT_NAME
+JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KCU2
+ON KCU2.CONSTRAINT_CATALOG =
+RC.UNIQUE_CONSTRAINT_CATALOG
+   AND KCU2.CONSTRAINT_SCHEMA =
+RC.UNIQUE_CONSTRAINT_SCHEMA
+   AND KCU2.CONSTRAINT_NAME =
+RC.UNIQUE_CONSTRAINT_NAME
+   AND KCU2.ORDINAL_POSITION = KCU1.ORDINAL_POSITION
+WHERE KCU1.TABLE_NAME = 'Song'
+
+
+DECLARE @k INT = 0;
+WHILE @k < 10000
+BEGIN
+    PRINT NEWID()
+    SET @k = @k + 1
+END
+
+
