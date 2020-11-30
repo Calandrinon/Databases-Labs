@@ -110,6 +110,9 @@ AS
     DELETE FROM Datatypes
     SET @Action = 'DELETE FROM ' + @TableName
     EXEC sp_executesql @Action
+    SET @Action = 'DBCC CHECKIDENT (''' + @TableName + ''', RESEED, 0)'
+    EXEC sp_executesql @Action
+
 
     WHILE @i < @NumberOfColumns
     BEGIN
@@ -180,11 +183,15 @@ GO
 EXEC TablesInsertion
 
 SELECT * FROM Tables
-DELETE FROM Artist
-SELECT * FROM Artist
 
 SELECT * FROM Datatypes
-EXEC TestTableInsertionTime @TableId = 26, @INSERTIONS = 10000
+SELECT * FROM Song
+SELECT * FROM Artist
+DELETE FROM Artist
+DELETE FROM Song
+DBCC CHECKIDENT ('Artist', RESEED, 0)
+DBCC CHECKIDENT ('Song', RESEED, 0)
+EXEC TestTableInsertionTime @TableId = 26, @INSERTIONS = 100
 
 
 SELECT
