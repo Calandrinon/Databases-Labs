@@ -153,8 +153,8 @@ AS
 
             SET @RandomValue = (
                 CASE @ColumnDatatype
-                    WHEN 'int' THEN cast(@i as NVARCHAR(50))
-                    WHEN 'smallint' THEN cast(@i as NVARCHAR(50))
+                    WHEN 'int' THEN cast(@i + 1 as NVARCHAR(50))
+                    WHEN 'smallint' THEN cast(@i + 1 as NVARCHAR(50))
                     WHEN 'text' THEN '''' + left(NEWID(), 30) + ''''
                     WHEN 'varchar' THEN '''' + left(NEWID(), 30) + ''''
                     WHEN 'datetime' THEN '''' + cast(DATEADD(DAY, ABS(CHECKSUM(NEWID()) % (365 * 10) ), '2011-01-01') as NVARCHAR(50)) + ''''
@@ -189,9 +189,7 @@ SELECT * FROM Song
 SELECT * FROM Artist
 DELETE FROM Artist
 DELETE FROM Song
-DBCC CHECKIDENT ('Artist', RESEED, 0)
-DBCC CHECKIDENT ('Song', RESEED, 0)
-EXEC TestTableInsertionTime @TableId = 26, @INSERTIONS = 100
+EXEC TestTableInsertionTime @TableId = 27, @INSERTIONS = 1000
 
 
 SELECT
