@@ -3,23 +3,19 @@
 SELECT *
 FROM sys.tables
 
-CREATE OR ALTER PROCEDURE GenerateRandomString (@Output VARCHAR(50) OUTPUT)
+CREATE VIEW GetRandomValue
 AS
-    DECLARE @Length INT = RAND() * 5 + 8;
-    DECLARE @CharPool VARCHAR(72) =
-        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNPQRSTUVWXYZ123456789.,-_!$@#%^&*'
-    DECLARE @PoolLength INT = Len(@CharPool)
-    DECLARE @LoopCount INT = 0
-    DECLARE @RandomString VARCHAR(50) = ''
-
-    WHILE (@LoopCount < @Length) BEGIN
-        SELECT @RandomString = @RandomString +
-            SUBSTRING(@Charpool, CONVERT(int, RAND() * @PoolLength), 1)
-        SELECT @LoopCount = @LoopCount + 1
-    END
-
-    SELECT @Output = @RandomString
+SELECT RAND() AS Value
 GO
+
+CREATE OR ALTER FUNCTION GenerateRandomString ()
+RETURNS VARCHAR
+AS
+BEGIN
+    RETURN left(NEWID(),30)
+END
+GO
+
 
 CREATE OR ALTER FUNCTION GenerateRandomDate (@NewId UNIQUEIDENTIFIER)
 RETURNS DATETIME
@@ -32,12 +28,13 @@ DECLARE @Result DATETIME
 SET @Result = (SELECT dbo.GenerateRandomDate(NEWID()))
 PRINT @Result
 
+SELECT left(NEWID(),30)
 
-DECLARE @Result VARCHAR(50)
-EXEC GenerateRandomString @Result OUTPUT
+DECLARE @Result NVARCHAR(50)
+SET @Result = (SELECT dbo.GenerateRandomString())
 PRINT @Result
 
-
+/**
 CREATE OR ALTER PROCEDURE TestAlbumTableInsertionTime (@INSERTIONS INT)
 AS
     DECLARE @startTime DATETIME;
@@ -57,7 +54,7 @@ AS
     SET @startTime= GETDATE();
     WHILE @i < @INSERTIONS
         BEGIN
-            EXEC GenerateRandomString @randomName OUTPUT
+            SET @randomName = (SELECT GenerateRandomString)
             EXEC GenerateRandomString @randomLink OUTPUT
             SET @randomDate = (SELECT dbo.GenerateRandomDate(NEWID()))
             PRINT 'Record: ' + @randomName + ' ' + @randomDate + ' ' + @randomLink
@@ -68,7 +65,7 @@ AS
     SET @endTime= GETDATE();
     SELECT DATEDIFF(millisecond,@startTime,@endTime) AS elapsed_ms;
 GO
-
+**/
 
 CREATE OR ALTER PROCEDURE TablesInsertion
 AS
@@ -89,43 +86,78 @@ AS
     DECLARE @startTime DATETIME;
     DECLARE @endTime DATETIME;
 
-    DECLARE @i INT = 0;
+    DECLARE @i INT = 1;
     DECLARE @NumberOfColumns INT = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName);
-    DECLARE @Action NVARCHAR(50);
+    DECLARE @Action NVARCHAR(200);
+    DECLARE @Columns NVARCHAR(500) = '(';
+    DECLARE @ColumnName NVARCHAR(50);
+    DECLARE @Datatype NVARCHAR(50);
+    DECLARE @j INT = 0;
+    DECLARE @ColumnDatatype NVARCHAR(50);
+    DECLARE @RandomValue NVARCHAR(50);
+    DECLARE @RowValues NVARCHAR(500) = '';
+
     WHILE @i < @NumberOfColumns
     BEGIN
-        SET @i = @i + 1;
-        SET @Action = 'DECLARE @Random' +
-        cast((SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @i) as NVARCHAR(50)) +
-        ' ' +
-        cast((SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @i) as NVARCHAR(50))
-        PRINT 'EXEC ' + @Action
-        EXEC sp_executesql @Action
-    END
+        IF @i != 1
+        BEGIN
+            SET @Columns = @Columns + ',';
+        END
 
-    /**
+        SET @i = @i + 1;
+        SET @ColumnName = cast((SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @i) as NVARCHAR(50))
+        SET @Datatype = cast((SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @i) as NVARCHAR(50))
+        SET @Columns = @Columns + @ColumnName
+    END
+    SET @Columns = @Columns + ')'
+
+    PRINT @Columns
+
     SET @i = 0;
     SET @startTime= GETDATE();
-    DECLARE @j INT = 0;
+    SET @j = 1;
+    SET @RowValues = '';
 
     WHILE @i < @INSERTIONS
+    BEGIN
+        --SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE 'Review'
+        --SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE 'Song'
+        SET @RowValues = '('
+        SET @j = 1;
+        WHILE @j < @NumberOfColumns
         BEGIN
+            IF @j != 1
+                SET @RowValues = @RowValues + ','
 
-            EXEC GenerateRandomString @randomName OUTPUT
-            EXEC GenerateRandomString @randomLink OUTPUT
-            SET @randomDate = (SELECT dbo.GenerateRandomDate(NEWID()))
-            PRINT 'Record: ' + @randomName + ' ' + @randomDate + ' ' + @randomLink
-            INSERT INTO Album (Name, ReleaseDate, AlbumArtLink) VALUES (@randomName, @randomDate, @randomLink)
-            SET @i = @i + 1;
+            SET @j = @j + 1;
+            SET @ColumnDatatype = cast((SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @j) as NVARCHAR(50))
+
+            SET @RandomValue = (
+                CASE @ColumnDatatype
+                    WHEN 'int' THEN cast(@i as NVARCHAR(50))
+                    WHEN 'text' THEN '''' + left(NEWID(), 30) + ''''
+                    WHEN 'varchar' THEN '''' + left(NEWID(), 30) + ''''
+                    WHEN 'datetime' THEN '''' + cast(DATEADD(DAY, ABS(CHECKSUM(NEWID()) % (365 * 10) ), '2011-01-01') as NVARCHAR(50)) + ''''
+                    WHEN 'date' then '''' + cast(DATEADD(DAY, (ABS(CHECKSUM(NEWID())) % 65530), 0) as NVARCHAR(50)) + ''''
+                END)
+
+            SET @ColumnName = cast((SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @j) as NVARCHAR(50))
+            SET @RowValues = @RowValues + cast(@RandomValue as NVARCHAR(50))
         END
+        SET @RowValues = @RowValues + ')'
+        SET @Action = 'INSERT INTO ' + @TableName + @Columns + ' VALUES ' + @RowValues
+        PRINT @Action
+        EXEC sp_executesql @Action
+        SET @i = @i + 1;
+    END
 
     SET @endTime= GETDATE();
     SELECT DATEDIFF(millisecond,@startTime,@endTime) AS elapsed_ms;
-    **/
 GO
 
 EXEC TablesInsertion
 SELECT * FROM Tables
 
-EXEC TestTableInsertionTime @TableId = 8, @INSERTIONS = 1000
+SELECT * FROM Album
+EXEC TestTableInsertionTime @TableId = 11, @INSERTIONS = 100
 
