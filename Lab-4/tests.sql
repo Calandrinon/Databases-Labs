@@ -78,6 +78,7 @@ CREATE OR ALTER PROCEDURE TestTableInsertionTime (@TableId INT, @INSERTIONS INT)
 AS
     DECLARE @TableName VARCHAR(50) = (SELECT T.Name FROM Tables T WHERE T.TableID = @TableId)
     PRINT @TableName
+
     IF (@TableName IS NULL)
     BEGIN
         THROW 123456, 'The table could not be found in [Tables]', 255
@@ -96,6 +97,7 @@ AS
     DECLARE @ColumnDatatype NVARCHAR(50);
     DECLARE @RandomValue NVARCHAR(50);
     DECLARE @RowValues NVARCHAR(500) = '';
+    DECLARE @ElapsedMilliseconds BIGINT = 0;
 
     WHILE @i < @NumberOfColumns
     BEGIN
@@ -147,17 +149,22 @@ AS
         SET @RowValues = @RowValues + ')'
         SET @Action = 'INSERT INTO ' + @TableName + @Columns + ' VALUES ' + @RowValues
         PRINT @Action
+
+        SET @startTime = GETDATE();
         EXEC sp_executesql @Action
+        SET @endTime = GETDATE();
+        SET @ElapsedMilliseconds = @ElapsedMilliseconds + (SELECT DATEDIFF(millisecond,@startTime,@endTime))
         SET @i = @i + 1;
     END
 
     SET @endTime= GETDATE();
-    SELECT DATEDIFF(millisecond,@startTime,@endTime) AS elapsed_ms;
+    PRINT 'Elapsed milliseconds: ' + cast(@ElapsedMilliseconds as VARCHAR(50))
+    PRINT 'Elapsed seconds: ' + cast((cast(@ElapsedMilliseconds as REAL) / 1000) as VARCHAR(50))
 GO
 
 EXEC TablesInsertion
 SELECT * FROM Tables
 
 SELECT * FROM Album
+DELETE FROM Album
 EXEC TestTableInsertionTime @TableId = 11, @INSERTIONS = 100
-
