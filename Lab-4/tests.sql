@@ -108,6 +108,8 @@ AS
     DECLARE @RowValues NVARCHAR(500) = '';
     DECLARE @ElapsedMilliseconds BIGINT = 0;
     DELETE FROM Datatypes
+    SET @Action = 'DELETE FROM ' + @TableName
+    EXEC sp_executesql @Action
 
     WHILE @i < @NumberOfColumns
     BEGIN
@@ -182,7 +184,7 @@ DELETE FROM Artist
 SELECT * FROM Artist
 
 SELECT * FROM Datatypes
-EXEC TestTableInsertionTime @TableId = 26, @INSERTIONS = 1000
+EXEC TestTableInsertionTime @TableId = 26, @INSERTIONS = 10000
 
 
 SELECT
