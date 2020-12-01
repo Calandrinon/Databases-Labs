@@ -1,13 +1,6 @@
 -- noinspection SqlResolveForFile @ routine/"sp_executesql"
 
-SELECT *
-FROM sys.tables
-
-CREATE VIEW GetRandomValue
-AS
-SELECT RAND() AS Value
-GO
-
+/**
 CREATE OR ALTER FUNCTION GenerateRandomString ()
 RETURNS VARCHAR
 AS
@@ -34,7 +27,6 @@ DECLARE @Result NVARCHAR(50)
 SET @Result = (SELECT dbo.GenerateRandomString())
 PRINT @Result
 
-/**
 CREATE OR ALTER PROCEDURE TestAlbumTableInsertionTime (@INSERTIONS INT)
 AS
     DECLARE @startTime DATETIME;
@@ -70,9 +62,11 @@ GO
 CREATE OR ALTER PROCEDURE TablesInsertion
 AS
     BEGIN TRY DELETE FROM Tables END TRY BEGIN CATCH END CATCH
-    INSERT INTO Tables (Name) VALUES ('Album')
+    DBCC CHECKIDENT (Tables, RESEED, 0)
     INSERT INTO Tables (Name) VALUES ('Artist')
+    INSERT INTO Tables (Name) VALUES ('Album')
     INSERT INTO Tables (Name) VALUES ('Song');
+    INSERT INTO Tables (Name) VALUES ('Albums_Songs')
 
     BEGIN TRY DROP TABLE Datatypes END TRY BEGIN CATCH END CATCH
     BEGIN TRY
@@ -96,7 +90,15 @@ AS
     DECLARE @startTime DATETIME;
     DECLARE @endTime DATETIME;
 
-    DECLARE @i INT = 1;
+    DECLARE @HasIdentityColumn INT = 0;
+    EXEC HasIdentity @tablename = @TableName, @NumberOfIdentities=@HasIdentityColumn OUTPUT
+    PRINT 'HASIDENTITYCOLUMN: ' + cast(@HasIdentityColumn as VARCHAR(4))
+
+    DECLARE @i INT;
+    IF @HasIdentityColumn = 0
+        BEGIN SET @i = 0 END
+    ELSE
+        BEGIN SET @i = 1 END
     DECLARE @NumberOfColumns INT = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName);
     DECLARE @Action NVARCHAR(200);
     DECLARE @Columns NVARCHAR(500) = '(';
@@ -111,12 +113,16 @@ AS
     SET @Action = 'DELETE FROM ' + @TableName
     EXEC sp_executesql @Action
     SET @Action = 'DBCC CHECKIDENT (''' + @TableName + ''', RESEED, 0)'
-    EXEC sp_executesql @Action
-
+    BEGIN TRY
+        EXEC sp_executesql @Action
+    END TRY
+    BEGIN CATCH
+        PRINT 'The table does not have an identity column, so the reseed has not been executed.'
+    END CATCH
 
     WHILE @i < @NumberOfColumns
     BEGIN
-        IF @i != 1
+        IF @i != @HasIdentityColumn
         BEGIN
             SET @Columns = @Columns + ',';
         END
@@ -142,10 +148,14 @@ AS
         --SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE 'Review'
         --SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE 'Song'
         SET @RowValues = '('
-        SET @j = 1;
+        IF @HasIdentityColumn = 0
+        BEGIN SET @j = 0 END
+        ELSE
+        BEGIN SET @j = 1 END
+
         WHILE @j < @NumberOfColumns
         BEGIN
-            IF @j != 1
+            IF @j != @HasIdentityColumn
                 SET @RowValues = @RowValues + ','
 
             SET @j = @j + 1;
@@ -160,7 +170,7 @@ AS
                     WHEN 'datetime' THEN '''' + cast(DATEADD(DAY, ABS(CHECKSUM(NEWID()) % (365 * 10) ), '2011-01-01') as NVARCHAR(50)) + ''''
                     WHEN 'date' then '''' + cast(DATEADD(DAY, (ABS(CHECKSUM(NEWID())) % 65530), 0) as NVARCHAR(50)) + ''''
                 END)
-
+            PRINT '@RandomValue: ' + cast(@RandomValue as NVARCHAR(50))
             --SET @ColumnName = cast((SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE @TableName AND ORDINAL_POSITION = @j) as NVARCHAR(50))
             SET @RowValues = @RowValues + cast(@RandomValue as NVARCHAR(50))
         END
@@ -183,40 +193,28 @@ GO
 EXEC TablesInsertion
 
 SELECT * FROM Tables
-
 SELECT * FROM Datatypes
-SELECT * FROM Song
+
 SELECT * FROM Artist
-DELETE FROM Artist
+SELECT * FROM Album
+SELECT * FROM Song
+SELECT * FROM Albums_Songs
+DELETE FROM Album
 DELETE FROM Song
-EXEC TestTableInsertionTime @TableId = 27, @INSERTIONS = 1000
+DELETE FROM Albums_Songs
 
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE 'Albums_Songs'
 
-SELECT
-   KCU1.TABLE_NAME AS 'FK_TABLE_NAME'
-   , KCU1.COLUMN_NAME AS 'FK_COLUMN_NAME'
-   , KCU2.TABLE_NAME AS 'UQ_TABLE_NAME'
-FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS RC
-JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KCU1
-ON KCU1.CONSTRAINT_CATALOG = RC.CONSTRAINT_CATALOG
-   AND KCU1.CONSTRAINT_SCHEMA = RC.CONSTRAINT_SCHEMA
-   AND KCU1.CONSTRAINT_NAME = RC.CONSTRAINT_NAME
-JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KCU2
-ON KCU2.CONSTRAINT_CATALOG =
-RC.UNIQUE_CONSTRAINT_CATALOG
-   AND KCU2.CONSTRAINT_SCHEMA =
-RC.UNIQUE_CONSTRAINT_SCHEMA
-   AND KCU2.CONSTRAINT_NAME =
-RC.UNIQUE_CONSTRAINT_NAME
-   AND KCU2.ORDINAL_POSITION = KCU1.ORDINAL_POSITION
-WHERE KCU1.TABLE_NAME = 'Song'
+EXEC TestTableInsertionTime @TableId = 1, @INSERTIONS = 1000
+EXEC TestTableInsertionTime @TableId = 2, @INSERTIONS = 1000
+EXEC TestTableInsertionTime @TableId = 3, @INSERTIONS = 1000
+EXEC TestTableInsertionTime @TableId = 4, @INSERTIONS = 1000
 
-
-DECLARE @k INT = 0;
-WHILE @k < 10000
+CREATE OR ALTER PROCEDURE HasIdentity
+@TableName nvarchar(128), @NumberOfIdentities INT OUTPUT
+AS
 BEGIN
-    PRINT NEWID()
-    SET @k = @k + 1
+    SELECT @NumberOfIdentities = COUNT(*)
+    FROM     sys.identity_columns
+    WHERE OBJECT_NAME(OBJECT_ID) = @TableName
 END
-
-
