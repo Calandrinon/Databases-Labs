@@ -59,6 +59,29 @@ AS
 GO
 **/
 
+CREATE OR ALTER TRIGGER AddTableTest
+ON Tables
+AFTER INSERT
+AS
+    INSERT INTO Tests (Name)
+    VALUES ('Test'+(SELECT NAME FROM inserted)+'-100'),
+           ('Test'+(SELECT NAME FROM inserted)+'-500'),
+           ('Test'+(SELECT NAME FROM inserted)+'-1000'),
+           ('Test'+(SELECT NAME FROM inserted)+'-5000'),
+           ('Test'+(SELECT NAME FROM inserted)+'-10000')
+
+CREATE OR ALTER TRIGGER AddTestInTestTables
+ON Tests
+AFTER INSERT
+AS
+    --SELECT TableID FROM Tables WHERE Name = (SELECT VALUE FROM STRING_SPLIT((SELECT Name FROM INSERTED), '-') ORDER BY VALUE ASC OFFSET 1 ROWS)
+    INSERT INTO TestTables (TestID, TableID, NoOfRows, Position)
+    VALUES ((SELECT MAX(TestID) FROM Tests),
+            cast((SELECT TableID FROM Tables WHERE Name = (SELECT VALUE FROM STRING_SPLIT((SELECT Name FROM INSERTED), '-') ORDER BY VALUE ASC OFFSET 1 ROWS)) as INT),
+            cast((SELECT TOP 1 VALUE FROM STRING_SPLIT((SELECT Name FROM INSERTED), '-') ORDER BY VALUE ASC) as INT),
+            0)
+
+
 CREATE OR ALTER PROCEDURE TablesInsertion
 AS
     BEGIN TRY DELETE FROM Tables END TRY BEGIN CATCH END CATCH
@@ -140,7 +163,7 @@ AS
 
     SET @i = 0;
     SET @startTime= GETDATE();
-    SET @j = 1;
+    SET @j = 0;
     SET @RowValues = '';
 
     WHILE @i < @INSERTIONS
@@ -193,6 +216,9 @@ GO
 EXEC TablesInsertion
 
 SELECT * FROM Tables
+SELECT * FROM TestTables
+SELECT * FROM Tests
+
 SELECT * FROM Datatypes
 
 SELECT * FROM Artist
@@ -203,12 +229,11 @@ DELETE FROM Album
 DELETE FROM Song
 DELETE FROM Albums_Songs
 
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME LIKE 'Albums_Songs'
-
 EXEC TestTableInsertionTime @TableId = 1, @INSERTIONS = 1000
 EXEC TestTableInsertionTime @TableId = 2, @INSERTIONS = 1000
 EXEC TestTableInsertionTime @TableId = 3, @INSERTIONS = 1000
 EXEC TestTableInsertionTime @TableId = 4, @INSERTIONS = 1000
+
 
 CREATE OR ALTER PROCEDURE HasIdentity
 @TableName nvarchar(128), @NumberOfIdentities INT OUTPUT
@@ -218,3 +243,9 @@ BEGIN
     FROM     sys.identity_columns
     WHERE OBJECT_NAME(OBJECT_ID) = @TableName
 END
+
+
+
+SELECT VALUE FROM STRING_SPLIT('TestAlbum-1000', '-') ORDER BY VALUE ASC
+SELECT TOP 1 VALUE FROM STRING_SPLIT('TestAlbum-1000', '-') ORDER BY VALUE ASC
+SELECT VALUE FROM STRING_SPLIT('TestAlbum-1000', '-') ORDER BY VALUE ASC OFFSET 1 ROWS
