@@ -100,7 +100,7 @@ AS
     BEGIN CATCH END CATCH
 GO
 
-CREATE OR ALTER PROCEDURE TestTableInsertionTime (@TableId INT, @INSERTIONS INT)
+CREATE OR ALTER PROCEDURE TestTableInsertionTime (@TableId INT, @INSERTIONS INT, @ElapsedTime REAL OUTPUT)
 AS
     DECLARE @TableName VARCHAR(50) = (SELECT T.Name FROM Tables T WHERE T.TableID = @TableId)
     PRINT @TableName
@@ -204,6 +204,7 @@ AS
 
     PRINT 'Elapsed milliseconds: ' + cast(@ElapsedMilliseconds as VARCHAR(50))
     PRINT 'Elapsed seconds: ' + cast((cast(@ElapsedMilliseconds as REAL) / 1000) as VARCHAR(50))
+    SET @ElapsedTime = cast(@ElapsedMilliseconds as REAL) / 1000
 GO
 
 EXEC TablesInsertion
@@ -271,6 +272,13 @@ AS
     DECLARE @TableName NVARCHAR(50);
     DECLARE @Action NVARCHAR(200);
     DECLARE @NumberOfInsertions INT;
+    DECLARE @Time REAL = 0;
+    DECLARE @TotalTime REAL = 0;
+    DECLARE @StartTime DATETIME;
+    DECLARE @EndTime DATETIME;
+    DECLARE @StartTime2 DATETIME;
+    DECLARE @EndTime2 DATETIME;
+    DECLARE @Somestring VARCHAR(200);
 
     WHILE @i < @NumberOfTests
     BEGIN
@@ -283,6 +291,9 @@ AS
         SET @NumberOfTables = (SELECT COUNT(*) FROM TestTables WHERE TestID = @TestID)
         SELECT * INTO #CurrentTests FROM TestTables WHERE TestID = @TestID
         INSERT INTO CurrentTestsSortedByPosition (TableID, Position, NoOfRows) SELECT TableID, Position, NoOfRows FROM TestTables WHERE TestID = @TestID ORDER BY Position ASC
+
+        SET @StartTime = GETDATE()
+        INSERT INTO TestRuns (Description, StartAt, EndAt) VALUES ('Sometest', @StartTime, @EndTime)
 
         WHILE @j < @NumberOfTables
         BEGIN
@@ -301,15 +312,31 @@ AS
             SET @TableID = (SELECT TableID FROM (SELECT ROW_NUMBER() OVER (ORDER BY TestID) AS 'ROW', * FROM #CurrentTests) AS T WHERE ROW=@j)
             SET @TableName = (SELECT Name FROM Tables WHERE TableID = @TableID)
             SET @NumberOfInsertions = (SELECT NoOfRows FROM TestTables WHERE TestID = @TestID AND TableID = @TableID)
-            SET @Action = 'EXEC TestTableInsertionTime @TableId = ' + cast(@TableID as NVARCHAR(50)) + ', @INSERTIONS = ' + cast(@NumberOfInsertions as NVARCHAR(50))
+
+            --For debugging purposes
+            SET @Action = 'EXEC TestTableInsertionTime @TableId = ' + cast(@TableID as NVARCHAR(50)) + ', @INSERTIONS = ' + cast(@NumberOfInsertions as NVARCHAR(50)) + ', @ElapsedTime = @Time OUTPUT'
+
+            SET @StartTime2 = GETDATE()
+            EXEC TestTableInsertionTime @TableId = @TableID, @INSERTIONS = @NumberOfInsertions, @ElapsedTime = @Time OUTPUT
+            SET @EndTime2 = GETDATE()
+
+            --For debugging purposes
+            SET @Somestring = 'INSERT INTO TestRunTables (TestRunID, TableID, StartAt, EndAt) VALUES (' + cast(((SELECT MAX(TestRunID) FROM TestRuns)) as VARCHAR(50)) + ',' +  cast(@TableID as VARCHAR(50)) + ',' + cast(@StartTime2 as VARCHAR(50)) + ',' + cast(@EndTime2 as VARCHAR(50)) + ')'
+            PRINT @Somestring
+            INSERT INTO TestRunTables (TestRunID, TableID, StartAt, EndAt) VALUES ((SELECT MAX(TestRunID) FROM TestRuns), @TableID, @StartTime2, @EndTime2)
+
             PRINT @Action
-            EXEC sp_executesql @Action
+            SET @TotalTime = @TotalTime + @Time
             PRINT @TableName
         END
 
+        SET @EndTime = GETDATE()
         DROP TABLE #CurrentTests
         DELETE FROM CurrentTestsSortedByPosition
+        UPDATE TestRuns SET EndAt = @EndTime WHERE StartAt = @StartTime
     END
+
+    PRINT 'Total time taken: ' + cast(@TotalTime as VARCHAR(30)) + ' seconds'
 
     DROP TABLE CurrentTestsSortedByPosition
 GO
@@ -319,4 +346,11 @@ SELECT * FROM Song
 SELECT * FROM Album
 SELECT * FROM Artist
 EXEC StartTests
+DELETE FROM Albums_Songs
+DELETE FROM Song
+DELETE FROM Album
+DELETE FROM Artist
 
+DELETE FROM TestRuns
+SELECT * FROM TestRuns
+SELECT * FROM TestRunTables
