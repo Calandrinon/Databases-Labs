@@ -51,6 +51,7 @@ CREATE TABLE Artists_Albums
 CREATE TABLE Song
     (SongId INT IDENTITY(1, 1) PRIMARY KEY,
      Title VARCHAR(50),
+     Length TINYINT,
      ArtistId INT REFERENCES Artist(ArtistId))
 
 

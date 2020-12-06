@@ -100,6 +100,18 @@ AS
     BEGIN CATCH END CATCH
 GO
 
+CREATE OR ALTER PROCEDURE ViewsInsertion
+AS
+    BEGIN TRY DELETE FROM Views END TRY BEGIN CATCH END CATCH
+    DBCC CHECKIDENT (Views, RESEED, 0)
+    INSERT INTO Views (Name) VALUES ('GetArtistsEstablishedInThe1960s')
+    INSERT INTO Views (Name) VALUES ('GetAlbumsReleasedInThe1970s')
+    INSERT INTO Views (Name) VALUES ('GetSongsReleasedInThe1980s')
+    INSERT INTO Views (Name) VALUES ('GetArtWithTheirLongestSongHavingMoreThan15M')
+GO
+
+SELECT * FROM Tables
+
 CREATE OR ALTER PROCEDURE TestTableInsertionTime (@TableId INT, @INSERTIONS INT, @ElapsedTime REAL OUTPUT)
 AS
     DECLARE @TableName VARCHAR(50) = (SELECT T.Name FROM Tables T WHERE T.TableID = @TableId)
@@ -183,7 +195,8 @@ AS
             SET @RandomValue = (
                 CASE @ColumnDatatype
                     WHEN 'int' THEN cast(@i + 1 as NVARCHAR(50))
-                    WHEN 'smallint' THEN cast(@i + 1 as NVARCHAR(50))
+                    WHEN 'smallint' THEN cast(1+FLOOR(RAND()*(2020-1700+1)+1700) as NVARCHAR(50))
+                    WHEN 'tinyint' THEN cast(FLOOR(RAND()*(25-1+1)+1) as NVARCHAR(50))
                     WHEN 'text' THEN '''' + left(NEWID(), 30) + ''''
                     WHEN 'varchar' THEN '''' + left(NEWID(), 30) + ''''
                     WHEN 'datetime' THEN '''' + cast(DATEADD(DAY, ABS(CHECKSUM(NEWID()) % (365 * 10) ), '2011-01-01') as NVARCHAR(50)) + ''''
@@ -209,26 +222,7 @@ GO
 
 EXEC TablesInsertion
 
-SELECT * FROM Tables
-SELECT * FROM TestTables
-SELECT * FROM Tests
-
 SELECT * FROM Datatypes
-
-SELECT * FROM Artist
-SELECT * FROM Album
-SELECT * FROM Song
-SELECT * FROM Albums_Songs
-DELETE FROM Artist
-DELETE FROM Album
-DELETE FROM Song
-DELETE FROM Albums_Songs
-
-EXEC TestTableInsertionTime @TableId = 1, @INSERTIONS = 1000
-EXEC TestTableInsertionTime @TableId = 2, @INSERTIONS = 1000
-EXEC TestTableInsertionTime @TableId = 3, @INSERTIONS = 1000
-EXEC TestTableInsertionTime @TableId = 4, @INSERTIONS = 1000
-
 
 CREATE OR ALTER PROCEDURE HasIdentity
 @TableName nvarchar(128), @NumberOfIdentities INT OUTPUT
@@ -242,18 +236,25 @@ END
 
 CREATE OR ALTER PROCEDURE TestTablesPreparation
 AS
+    DELETE FROM TestTables
+    DELETE FROM TestViews
+    DELETE FROM Tables
+    DELETE FROM Views
+    EXEC TablesInsertion
+    EXEC ViewsInsertion
     INSERT INTO Tests (Name) VALUES ('TableTest1000')
     DECLARE @TestID INT = (SELECT MAX(TestID) FROM Tests)
     INSERT INTO TestTables (TestID, TableID, NoOfRows, Position) VALUES (@TestID, 1, 1000, 3)
     INSERT INTO TestTables (TestID, TableID, NoOfRows, Position) VALUES (@TestID, 2, 1000, 2)
     INSERT INTO TestTables (TestID, TableID, NoOfRows, Position) VALUES (@TestID, 3, 1000, 1)
     INSERT INTO TestTables (TestID, TableID, NoOfRows, Position) VALUES (@TestID, 4, 1000, 0)
-    EXEC TablesInsertion
+    INSERT INTO TestViews (TestID, ViewID) VALUES (@TestID, 1)
+    INSERT INTO TestViews (TestID, ViewID) VALUES (@TestID, 2)
+    INSERT INTO TestViews (TestID, ViewID) VALUES (@TestID, 3)
+    INSERT INTO TestViews (TestID, ViewID) VALUES (@TestID, 4)
 GO
-EXEC TestTablesPreparation
 
-SELECT * FROM Tests
-SELECT * FROM TestTables
+EXEC TestTablesPreparation
 
 CREATE OR ALTER PROCEDURE StartTests
 AS
@@ -325,6 +326,14 @@ AS
             PRINT @Somestring
             INSERT INTO TestRunTables (TestRunID, TableID, StartAt, EndAt) VALUES ((SELECT MAX(TestRunID) FROM TestRuns), @TableID, @StartTime2, @EndTime2)
 
+
+            SET @Action = 'SELECT * FROM ' + cast((SELECT V.Name FROM Views V WHERE V.ViewID = (SELECT T.ViewID FROM TestViews T WHERE ViewID = @TableID)) as NVARCHAR(50))
+            PRINT @Action
+            SET @StartTime2 = GETDATE()
+            EXEC sp_executesql @Action
+            SET @EndTime2 = GETDATE()
+            INSERT INTO TestRunViews (TestRunID, ViewID, StartAt, EndAt) VALUES ((SELECT MAX(TestRunID) FROM TestRuns), @TableID, @StartTime2, @EndTime2)
+
             PRINT @Action
             SET @TotalTime = @TotalTime + @Time
             PRINT @TableName
@@ -334,6 +343,7 @@ AS
         DROP TABLE #CurrentTests
         DELETE FROM CurrentTestsSortedByPosition
         UPDATE TestRuns SET EndAt = @EndTime WHERE StartAt = @StartTime
+
     END
 
     PRINT 'Total time taken: ' + cast(@TotalTime as VARCHAR(30)) + ' seconds'
@@ -346,11 +356,13 @@ SELECT * FROM Song
 SELECT * FROM Album
 SELECT * FROM Artist
 EXEC StartTests
-DELETE FROM Albums_Songs
-DELETE FROM Song
-DELETE FROM Album
-DELETE FROM Artist
 
-DELETE FROM TestRuns
-SELECT * FROM TestRuns
+SELECT * FROM Tests
+SELECT * FROM Tables
+SELECT * FROM TestTables
 SELECT * FROM TestRunTables
+SELECT * FROM Views
+SELECT * FROM TestViews
+SELECT * FROM TestRunViews
+SELECT * FROM TestRuns
+
