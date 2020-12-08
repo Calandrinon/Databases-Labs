@@ -20,7 +20,13 @@ GO
 
 CREATE OR ALTER VIEW GetArtWithTheirLongestSongHavingMoreThan15M
 AS
-    SELECT A.ArtistId FROM Artist A INNER JOIN Song S ON A.ArtistId = S.ArtistId GROUP BY A.ArtistId HAVING MAX(S.Length) > 15
+    SELECT A.ArtistId, A.Name
+    FROM Artist A
+    WHERE A.ArtistId IN
+        (SELECT A.ArtistId
+        FROM Artist A INNER JOIN Song S ON A.ArtistId = S.ArtistId
+        GROUP BY A.ArtistId
+        HAVING MAX(S.Length) > 15)
 GO
 
 
