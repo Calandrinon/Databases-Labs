@@ -28,7 +28,7 @@ CREATE TABLE Album
      Name VARCHAR(50) NOT NULL,
      ReleaseDate DATE NOT NULL,
      AlbumArtLink VARCHAR(200),
-     UNIQUE(Name, ReleaseDate, AlbumArtLink))
+     UNIQUE(Name, ReleaseDate))
 
 
 CREATE TABLE Genre
